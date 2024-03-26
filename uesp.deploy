@@ -10,10 +10,10 @@ staged = true
 ignore = *.deploy
 ignore = .git*
 
-# dest = content1.uesp.net:/home/uesp/www/w/extensions/WikiAppApi/
-# dest = content2.uesp.net:/home/uesp/www/w/extensions/WikiAppApi/
+dest = content1.uesp.net:/home/uesp/www/w/extensions/WikiAppApi/
+dest = content2.uesp.net:/home/uesp/www/w/extensions/WikiAppApi/
 dest = content3.uesp.net:/home/uesp/www/w/extensions/WikiAppApi/
 
-# destname = [backup]backup1.uesp.net:/home/uesp/www/w/extensions/WikiAppApi/
-# destname = [dev]content3.uesp.net:/home/uesp/dev/www/w/extensions/WikiAppApi/
+destname = [backup]backup1.uesp.net:/home/uesp/www/w/extensions/WikiAppApi/
+destname = [dev]content3.uesp.net:/home/uesp/dev/www/w/extensions/WikiAppApi/
 

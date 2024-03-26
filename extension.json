@@ -7,5 +7,16 @@
 	"description": "Defines the content and appearance for the mobile app.",
 	"license-name": "MIT",
 	"type": "other",
+	"MessagesDirs": {
+		"WikiAppApi": [
+			"i18n"
+		]
+	},
+	"AutoloadClasses": {
+		"WikiAppApi": "WikiAppApi.php"
+	},
+	"APIModules": {
+		"getapphome": "WikiAppApi"
+	},
 	"manifest_version": 1
 }
