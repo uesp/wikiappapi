@@ -7,6 +7,8 @@ use MediaWiki\MediaWikiServices;
 class WikiAppApi extends ApiBase
 {
 	public $REMOVE_JSON_COMMENTS = true;
+	public $parser = null;
+	public $parserOptions = null;
 	
 	
 	public function __construct($mainModule, $moduleName, $modulePrefix = '') 
@@ -39,6 +41,7 @@ class WikiAppApi extends ApiBase
 	public function getPageText($textTitle)
 	{
 			//TODO: fix/check for higher versions
+		
 		$title = Title::newFromText($textTitle);
 		$page = WikiPage::factory($title);
 		$content = $page->getContent(Revision::RAW);
@@ -54,49 +57,201 @@ class WikiAppApi extends ApiBase
 	}
 	
 	
+	public function getPageHtml($textTitle)
+	{
+			//TODO: fix/check for higher versions
+		
+		$title = Title::newFromText($textTitle);
+		$page = WikiPage::factory($title);
+		$content = $page->getContent(Revision::RAW);
+		$text = ContentHandler::getContentText($content);
+		
+		if ($text == null) return "";
+		
+		if ($this->parser == null)
+		{
+			$this->parser = new Parser;
+			$this->parserOptions = new ParserOptions;
+		}
+		
+		$parserOutput = $this->parser->parse( $text, $title, $this->parserOptions );
+		$html = $parserOutput->getText();
+		
+		return $html;
+	}
+	
+	
+	public function convertWikiTextToHtml($text)
+	{
+		if ($this->parser == null)
+		{
+			$this->parser = new Parser;
+			$this->parserOptions = new ParserOptions;
+		}
+		
+		$parserOutput = $this->parser->parse( $text, Title::newFromText("Fragment"), $this->parserOptions );
+		$html = $parserOutput->getText();
+		
+		return $html;
+	}
+	
+	
 	public function removeJsonComments($text)
 	{
 		return preg_replace('~(" (?:\\\\. | [^"])*+ ") | // [^\v]*+ | /\* .*? \*/~xs', '$1', $text);
 	}
 	
 	
+	public function getNewsContent($widget)
+	{
+		$currentPage = $widget['wiki_page'];
+		if ($currentPage == null) $currentPage = "UESPWiki:News";
+		
+		$content = [];
+		
+		return $content;
+	}
+	
+	
+	public function getTriviaContent($widget)
+	{
+		$currentPage = $widget['wiki_page'];
+		if ($currentPage == null) $currentPage = "Main_Page/Did_You_Know_Transclusion";
+		
+		$content = [];
+		
+		$triviaHtml = $this->getPageHtml($currentPage);
+		if ($triviaHtml == null || $triviaHtml == "") return $content;
+		
+		$isMatched = preg_match_all('#<li>(.*?)</li>#', $triviaHtml, $matches, PREG_PATTERN_ORDER);
+		if (!$isMatched) return $content;
+		
+		foreach ($matches[1] as $match)
+		{
+			$content[] = trim($match);
+		}
+		
+		return $content;
+	}
+	
+	
+	public function getFeaturedArticleContent($widget)
+	{
+		$currentPage = $widget['wiki_page'];
+		if ($currentPage == null) $currentPage = "Main Page/Featured Article";
+		
+		$currentFA = $this->getPageText($currentPage);
+		if (!$currentFA) return $content;
+		
+		$isMatched = preg_match('#\[\[([^\]]+)\]\]#', $currentFA, $matches);
+		if (!$isMatched) return $content;
+		
+		$articleLink = "";
+		$pageUrl = "";
+		$imageUrl = "";
+		$imageCaption = "";
+		$snippet = "";
+		
+		$articleLink = $matches[1];
+		$title = preg_replace('#^.*:#', '', $articleLink);
+		$mwtitle = Title::newFromText($articleLink);
+		$pageUrl = $mwtitle->getFullURL();
+		
+		$content = [
+			'title' => $articleLink,	//TODO: Confirm full article name with namespace or just the article name
+			'pageURL' => $pageUrl,
+		];
+		
+		$isMatched = preg_match('#<caption>(.*)</caption>#', $currentFA, $matches);
+		if ($isMatched)
+		{
+			$snippet = trim($matches[1]);
+			if ($snippet) $content['snippet'] = $this->convertWikiTextToHtml($snippet);
+		}
+		
+			//[[File:SR-npc-Serana.jpg|thumb|center|{{Center|'''Serana'''}}]]
+		$isMatched = preg_match('#\[\[(File:[^\]]+)\]\]#', $currentFA, $matches);
+		if (!$isMatched) return $content;
+		
+		$line = $matches[1];
+		$fileMatched = preg_match('#File:(.*?)\|(?:.*)\|?{{(?:.*\|)?(.*)}}#', $line, $matches);
+		if (!$fileMatched) $fileMatched = preg_match('#File:(.*?)\|(?:.*\|)?(?:.*\|)?(.*)$#', $line, $matches);
+		if (!$fileMatched) $fileMatched = preg_match('#File:(.*)#', $line, $matches);
+		
+		if ($fileMatched)
+		{
+			$imageFile = $matches[1];
+			$imageCaption = $matches[2];
+			if ($imageCaption == null) $imageCaption = "";
+			
+			$imageCaption = str_replace("'''", "", $imageCaption);
+			$imageCaption = str_replace("''", "", $imageCaption);
+			
+			$mwFile = wfFindFile($imageFile);
+			if ($mwFile) $imageUrl = $mwFile->getFullUrl();
+			
+			if ($imageUrl) $content['pageImageUrl'] = $imageUrl;
+		}
+		
+		return $content;
+	}
+	
+	
 	public function getFeaturedImageContent($widget)
 	{
-		$currentPage = $widget['current_page'];
-		$historyPage = $widget['history_page'];
+		$currentPage = $widget['wiki_page'];
+		if ($currentPage == null) $currentPage = "Main Page/Featured Image";
 		$content = [];
 		
 		$currentFI = $this->getPageText($currentPage);
+		if (!$currentFI) return $content;
 		
-		if ($currentFI)
+			//[[File:SR-npc-Serana.jpg|thumb|center|{{Center|'''Serana'''}}]]
+		$isMatched = preg_match('#\[\[(File:[^\]]+)\]\]#', $currentFI, $matches);
+		if (!$isMatched) return $content;
+		
+		$line = $matches[1];
+		$fileMatched = preg_match('#File:(.*?)\|(?:.*)\|?{{(?:.*\|)?(.*)}}#', $line, $matches);
+		if (!$fileMatched) $fileMatched = preg_match('#File:(.*?)\|(?:.*\|)?(?:.*\|)?(.*)$#', $line, $matches);
+		if (!$fileMatched) $fileMatched = preg_match('#File:(.*)#', $line, $matches);
+		
+		$file = "";
+		$imageUrl = "";
+		$caption = "";
+		
+		if ($fileMatched)
 		{
-			$isMatched = preg_match('#\[\[(File:.*)\]\]#', $currentFI, $matches);
+			$file = $matches[1];
+			$caption = $matches[2];
+			if ($caption == null) $caption = "";
 			
-			if ($isMatched)
-			{
-				$line = $matches[1];
-				$line = preg_replace('/[|].*$/', '', $line);
-				$file = str_replace("File:", "", $line);
-				$imageUrl = '';
-				
-				$file = wfFindFile($file);
-				$imageUrl = "";
-				if ($file) $imageUrl = $file->getFullUrl();
-				
-				$content[] = [
-					'imageURL' => $imageUrl,
-					'imagePageURL' => $line,
-					'caption' => 'TODO',
-				];
-				
-				return $content[0];
-			}
+			$caption = str_replace("'''", "", $caption);
+			$caption = str_replace("''", "", $caption);
+			
+			$mwFile = wfFindFile($file);
+			if ($mwFile) $imageUrl = $mwFile->getFullUrl();
 		}
 		
-		return [];
+		$content = [
+			'imageURL' => $imageUrl,
+			'imagePageURL' => "File:" . $file,
+		];
 		
+		if ($caption) $content['caption'] = $caption;
+		
+		return $content;
+	}
+	
+	//TODO: Remove if not needed
+	public function getFeaturedImageHistory($widget)
+	{
+		$content = [];
 		//$projectNS = $this->getProjectNamespace();
 		//$text = $this->getPageText("$projectNS:Featured Images/Old FIs");
+		
+		$historyPage = $widget['history_page'];
+		if ($historyPage == null) return $content;
+		
 		$text = $this->getPageText($historyPage);
 		
 		if ($text == null) return $content;	//TODO: Error or default value?
@@ -144,6 +299,16 @@ class WikiAppApi extends ApiBase
 			{
 				case "card_featured_image":
 					$widget['content'] = $this->getFeaturedImageContent($widget);
+					break;
+				case "card_featured_article":
+					$widget['content'] = $this->getFeaturedArticleContent($widget);
+					break;
+				case "trivia_box":
+				case "card_trivia":
+					$widget['content'] = $this->getTriviaContent($widget);
+					break;
+				case "card_news":
+					$widget['content'] = $this->getNewsContent($widget);
 					break;
 			}
 		}
