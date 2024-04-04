@@ -7,6 +7,8 @@ use MediaWiki\MediaWikiServices;
 class WikiAppApi extends ApiBase
 {
 	public $REMOVE_JSON_COMMENTS = true;
+	public $INCLUDE_NEWS_CONTENT = true;
+	
 	public $parser = null;
 	public $parserOptions = null;
 	
@@ -81,6 +83,29 @@ class WikiAppApi extends ApiBase
 	}
 	
 	
+	public function getPageTextAndHtml($textTitle)
+	{
+		//TODO: fix/check for higher versions
+		$title = Title::newFromText($textTitle);
+		$page = WikiPage::factory($title);
+		$content = $page->getContent(Revision::RAW);
+		$text = ContentHandler::getContentText($content);
+		
+		if ($text == null) return array("", "");
+		
+		if ($this->parser == null)
+		{
+			$this->parser = new Parser;
+			$this->parserOptions = new ParserOptions;
+		}
+		
+		$parserOutput = $this->parser->parse( $text, $title, $this->parserOptions );
+		$html = $parserOutput->getText();
+		
+		return array($text, $html);
+	}
+	
+	
 	public function convertWikiTextToHtml($text)
 	{
 		if ($this->parser == null)
@@ -102,12 +127,67 @@ class WikiAppApi extends ApiBase
 	}
 	
 	
+	public function getImageFileUrl($imageFile)
+	{	//$imageFile is an image article name without the leading "File:" namespace
+		$imageFile = preg_replace('#^File:#', '', $imageFile);
+		$mwFile = wfFindFile($imageFile);
+		if (!$mwFile) return "";
+		return $mwFile->getFullUrl();
+	}
+	
+	
+	public function loadNewsPageContent($textTitle, &$content)
+	{
+		list($text, $html) = $this->getPageTextAndHtml($textTitle);
+		if ($text == null || $html == null) return false;
+		
+		$isMatched = preg_match('#\[\[(File:[^\[|{]+)#', $text, $matches);
+		
+		if ($isMatched)
+		{
+			$imageUrl = $this->getImageFileUrl($matches[1]);
+			if ($imageUrl) $content['thumbnail'] = $imageUrl;
+		}
+		
+		$content['content'] = $html;
+		
+		//TODO: Get snippet from content?
+		
+		return true;
+	}
+	
+	
 	public function getNewsContent($widget)
 	{
 		$currentPage = $widget['wiki_page'];
 		if ($currentPage == null) $currentPage = "UESPWiki:News";
 		
 		$content = [];
+		
+		$newsText = $this->getPageText($currentPage);
+		if ($newsText == null || $newsText == "") return $content;
+		
+		$isMatched = preg_match('#<onlyinclude>(.*)</onlyinclude>#s', $newsText, $matches);
+		$newsSection = $newsText;
+		if ($isMatched) $newsSection = $matches[1];
+		
+			//TODO: Regex escaping here for $currentPage?
+		$isMatched = preg_match_all('#{{' . $currentPage . '/(.*)}}#', $newsSection, $matches, PREG_PATTERN_ORDER);
+		if (!$isMatched) return $content;
+		
+		foreach ($matches[1] as $match)
+		{
+			$link = $currentPage . "/" . $match;
+			
+			$newContent = [
+					'title' => $match,
+					'link' => $link,
+			];
+			
+			if ($this->INCLUDE_NEWS_CONTENT) $this->loadNewsPageContent($link, $newContent);
+			
+			$content[] = $newContent;
+		}
 		
 		return $content;
 	}
@@ -162,7 +242,7 @@ class WikiAppApi extends ApiBase
 			'pageURL' => $pageUrl,
 		];
 		
-		$isMatched = preg_match('#<caption>(.*)</caption>#', $currentFA, $matches);
+		$isMatched = preg_match('#<caption>(.*)</caption>#s', $currentFA, $matches);
 		if ($isMatched)
 		{
 			$snippet = trim($matches[1]);
