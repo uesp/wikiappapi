@@ -6,11 +6,13 @@ use MediaWiki\MediaWikiServices;
 
 class WikiAppApi extends ApiBase
 {
+		//TODO: Set from wiki config
 	public $REMOVE_JSON_COMMENTS = true;
 	public $INCLUDE_NEWS_CONTENT = true;
 	
 	public $parser = null;
 	public $parserOptions = null;
+	public $projectNS = null;
 	
 	
 	public function __construct($mainModule, $moduleName, $modulePrefix = '') 
@@ -29,11 +31,13 @@ class WikiAppApi extends ApiBase
 	
 	public function getProjectNamespace()
 	{
+		if ($this->projectNS) return $this->projectNS;
+		
 		global $wgMetaNamespace;
 		global $wgContLang;
 		
-		return $wgContLang->getFormattedNsText( NS_PROJECT );
-		//return $wgMetaNamespace;
+		$this->projectNS = $wgContLang->getFormattedNsText( NS_PROJECT );
+		return $this->projectNS;
 		
 		//TODO: Fix to work in higher MW versions? More portable version?
 		//return MediaWikiServices::getInstance()->getContentLanguage()->getFormattedNsText( NS_PROJECT );
@@ -42,7 +46,7 @@ class WikiAppApi extends ApiBase
 	
 	public function getPageText($textTitle)
 	{
-			//TODO: fix/check for higher versions
+		//TODO: fix/check for higher versions
 		
 		$title = Title::newFromText($textTitle);
 		$page = WikiPage::factory($title);
@@ -61,7 +65,7 @@ class WikiAppApi extends ApiBase
 	
 	public function getPageHtml($textTitle)
 	{
-			//TODO: fix/check for higher versions
+		//TODO: fix/check for higher versions
 		
 		$title = Title::newFromText($textTitle);
 		$page = WikiPage::factory($title);
@@ -86,6 +90,7 @@ class WikiAppApi extends ApiBase
 	public function getPageTextAndHtml($textTitle)
 	{
 		//TODO: fix/check for higher versions
+		
 		$title = Title::newFromText($textTitle);
 		$page = WikiPage::factory($title);
 		$content = $page->getContent(Revision::RAW);
@@ -107,7 +112,8 @@ class WikiAppApi extends ApiBase
 	
 	
 	public function convertWikiTextToHtml($text)
-	{
+	{	//Converts a fragment of wiki text into HTML
+		
 		if ($this->parser == null)
 		{
 			$this->parser = new Parser;
@@ -128,8 +134,10 @@ class WikiAppApi extends ApiBase
 	
 	
 	public function getImageFileUrl($imageFile)
-	{	//$imageFile is an image article name without the leading "File:" namespace
+	{	//$imageFile is an image article name with or without the leading "File:" namespace
+		
 		$imageFile = preg_replace('#^File:#', '', $imageFile);
+		
 		$mwFile = wfFindFile($imageFile);
 		if (!$mwFile) return "";
 		return $mwFile->getFullUrl();
@@ -160,7 +168,7 @@ class WikiAppApi extends ApiBase
 	public function getNewsContent($widget)
 	{
 		$currentPage = $widget['wiki_page'];
-		if ($currentPage == null) $currentPage = "UESPWiki:News";
+		if ($currentPage == null) $currentPage = $this->getProjectNamespace() . ":News";
 		
 		$content = [];
 		
@@ -171,8 +179,7 @@ class WikiAppApi extends ApiBase
 		$newsSection = $newsText;
 		if ($isMatched) $newsSection = $matches[1];
 		
-			//TODO: Regex escaping here for $currentPage?
-		$isMatched = preg_match_all('#{{' . $currentPage . '/(.*)}}#', $newsSection, $matches, PREG_PATTERN_ORDER);
+		$isMatched = preg_match_all('#{{' . preg_quote($currentPage) . '/(.*)}}#', $newsSection, $matches, PREG_PATTERN_ORDER);
 		if (!$isMatched) return $content;
 		
 		foreach ($matches[1] as $match)
@@ -322,18 +329,16 @@ class WikiAppApi extends ApiBase
 		return $content;
 	}
 	
+	
 	//TODO: Remove if not needed
 	public function getFeaturedImageHistory($widget)
 	{
 		$content = [];
-		//$projectNS = $this->getProjectNamespace();
-		//$text = $this->getPageText("$projectNS:Featured Images/Old FIs");
 		
 		$historyPage = $widget['history_page'];
 		if ($historyPage == null) return $content;
 		
 		$text = $this->getPageText($historyPage);
-		
 		if ($text == null) return $content;	//TODO: Error or default value?
 		
 		$isMatched = preg_match('#<gallery>(.*)</gallery>#s', $text, $matches);	//TODO: Different FI page formats?
@@ -407,7 +412,7 @@ class WikiAppApi extends ApiBase
 		$version = intval($params['version']);
 		if ($version <= 0) return $this->outputError("Invalid request, provided non-integer manifest version param.");
 		
-		//TODO: Check manifest version for valid value
+		//TODO: Check manifest version for valid value?
 		
 		$projectNS = $this->getProjectNamespace();
 		$text = $this->getPageText("$projectNS:AppHomePage");
