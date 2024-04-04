@@ -6,7 +6,7 @@ use MediaWiki\MediaWikiServices;
 
 class WikiAppApi extends ApiBase
 {
-		//TODO: Set from wiki config
+		//TODO: Set from wiki config?
 	public $REMOVE_JSON_COMMENTS = true;
 	public $INCLUDE_NEWS_CONTENT = true;
 	
@@ -29,35 +29,48 @@ class WikiAppApi extends ApiBase
 	}
 	
 	
+	public function createParser()
+	{
+		global $wgUser;
+		
+		if (class_exists('ParserFactory'))
+			$this->parser = MediaWikiServices::getInstance()->getParserFactory()->create();
+		else
+			$this->parser = new Parser;
+		
+		$this->parserOptions = new ParserOptions(new User( '127.0.0.1' ));
+	}
+	
+	
 	public function getProjectNamespace()
 	{
 		if ($this->projectNS) return $this->projectNS;
 		
-		global $wgMetaNamespace;
 		global $wgContLang;
 		
-		$this->projectNS = $wgContLang->getFormattedNsText( NS_PROJECT );
+		if ($wgContLang)
+		{
+			$this->projectNS = $wgContLang->getFormattedNsText( NS_PROJECT );
+		}
+		else
+		{
+			$this->projectNS = MediaWikiServices::getInstance()->getContentLanguage()->getFormattedNsText( NS_PROJECT );
+		}
 		return $this->projectNS;
-		
-		//TODO: Fix to work in higher MW versions? More portable version?
-		//return MediaWikiServices::getInstance()->getContentLanguage()->getFormattedNsText( NS_PROJECT );
 	}
 	
 	
 	public function getPageText($textTitle)
 	{
-		//TODO: fix/check for higher versions
-		
 		$title = Title::newFromText($textTitle);
 		$page = WikiPage::factory($title);
-		$content = $page->getContent(Revision::RAW);
-		$text = ContentHandler::getContentText($content);
 		
-		//$pageFactory = MediaWikiServices::getInstance()->getWikiPageFactory();
-		//$title = Title::newFromText("AppHomePage", 1);
-		//$page = $pageFactory->newFromTitle($title);
-		//$content = $page->getContent(RevisionRecord::RAW);
-		//$text = ContentHandler::getContentText( $content );
+		if (class_exists('Revision'))
+			$content = $page->getContent(Revision::RAW);
+		else
+			$content = $page->getContent(MediaWiki\Revision\RevisionRecord::RAW);
+		
+		$text = ContentHandler::getContentText($content);
 		
 		return $text;
 	}
@@ -65,20 +78,19 @@ class WikiAppApi extends ApiBase
 	
 	public function getPageHtml($textTitle)
 	{
-		//TODO: fix/check for higher versions
-		
 		$title = Title::newFromText($textTitle);
 		$page = WikiPage::factory($title);
-		$content = $page->getContent(Revision::RAW);
+		
+		if (class_exists('Revision'))
+			$content = $page->getContent(Revision::RAW);
+		else
+			$content = $page->getContent(MediaWiki\Revision\RevisionRecord::RAW);
+		
 		$text = ContentHandler::getContentText($content);
 		
 		if ($text == null) return "";
 		
-		if ($this->parser == null)
-		{
-			$this->parser = new Parser;
-			$this->parserOptions = new ParserOptions;
-		}
+		if ($this->parser == null) $this->createParser();
 		
 		$parserOutput = $this->parser->parse( $text, $title, $this->parserOptions );
 		$html = $parserOutput->getText();
@@ -89,20 +101,19 @@ class WikiAppApi extends ApiBase
 	
 	public function getPageTextAndHtml($textTitle)
 	{
-		//TODO: fix/check for higher versions
-		
 		$title = Title::newFromText($textTitle);
 		$page = WikiPage::factory($title);
-		$content = $page->getContent(Revision::RAW);
+		
+		if (class_exists('Revision'))
+			$content = $page->getContent(Revision::RAW);
+		else
+			$content = $page->getContent(MediaWiki\Revision\RevisionRecord::RAW);
+		
 		$text = ContentHandler::getContentText($content);
 		
 		if ($text == null) return array("", "");
 		
-		if ($this->parser == null)
-		{
-			$this->parser = new Parser;
-			$this->parserOptions = new ParserOptions;
-		}
+		if ($this->parser == null) $this->createParser();
 		
 		$parserOutput = $this->parser->parse( $text, $title, $this->parserOptions );
 		$html = $parserOutput->getText();
@@ -114,11 +125,7 @@ class WikiAppApi extends ApiBase
 	public function convertWikiTextToHtml($text)
 	{	//Converts a fragment of wiki text into HTML
 		
-		if ($this->parser == null)
-		{
-			$this->parser = new Parser;
-			$this->parserOptions = new ParserOptions;
-		}
+		if ($this->parser == null) $this->createParser();
 		
 		$parserOutput = $this->parser->parse( $text, Title::newFromText("Fragment"), $this->parserOptions );
 		$html = $parserOutput->getText();
@@ -137,6 +144,8 @@ class WikiAppApi extends ApiBase
 	{	//$imageFile is an image article name with or without the leading "File:" namespace
 		
 		$imageFile = preg_replace('#^File:#', '', $imageFile);
+		
+		//MediaWikiServices::getInstance()->getRepoGroup()->findFile() in 1.38+
 		
 		$mwFile = wfFindFile($imageFile);
 		if (!$mwFile) return "";
@@ -274,9 +283,7 @@ class WikiAppApi extends ApiBase
 			$imageCaption = str_replace("'''", "", $imageCaption);
 			$imageCaption = str_replace("''", "", $imageCaption);
 			
-			$mwFile = wfFindFile($imageFile);
-			if ($mwFile) $imageUrl = $mwFile->getFullUrl();
-			
+			$imageUrl = $this->getImageFileUrl($imageFile);
 			if ($imageUrl) $content['pageImageUrl'] = $imageUrl;
 		}
 		
@@ -315,8 +322,7 @@ class WikiAppApi extends ApiBase
 			$caption = str_replace("'''", "", $caption);
 			$caption = str_replace("''", "", $caption);
 			
-			$mwFile = wfFindFile($file);
-			if ($mwFile) $imageUrl = $mwFile->getFullUrl();
+			$imageUrl = $this->getImageFileUrl($file);
 		}
 		
 		$content = [
@@ -339,7 +345,7 @@ class WikiAppApi extends ApiBase
 		if ($historyPage == null) return $content;
 		
 		$text = $this->getPageText($historyPage);
-		if ($text == null) return $content;	//TODO: Error or default value?
+		if ($text == null) return $content;			//TODO: Error or default value?
 		
 		$isMatched = preg_match('#<gallery>(.*)</gallery>#s', $text, $matches);	//TODO: Different FI page formats?
 		if (!$isMatched) return $content;
@@ -356,11 +362,7 @@ class WikiAppApi extends ApiBase
 			$file = str_replace("File:", "", $line);
 			$imageUrl = '';
 			
-				//TODO: Work in more recent MW versions
-			//MediaWikiServices::getInstance()->getRepoGroup()->findFile() in 1.38+
-			$file = wfFindFile($file);
-			$imageUrl = "";
-			if ($file) $imageUrl = $file->getFullUrl();
+			$imageUrl = $this->getImageFileUrl($file);
 			
 			$content[] = [
 				'imageURL' => $imageUrl,
