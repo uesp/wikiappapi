@@ -174,6 +174,19 @@ class WikiAppApi extends ApiBase
 	}
 	
 	
+	public function getGenericContent($widget)
+	{
+		$content = [];
+		
+		$templateContent = $widget['template_content'];
+		if ($templateContent == null) return $content;
+		
+		$content = $this->getPageHtml($templateContent);
+		
+		return $content;
+	}
+	
+	
 	public function getNewsContent($widget)
 	{
 		$currentPage = $widget['wiki_page'];
@@ -396,6 +409,9 @@ class WikiAppApi extends ApiBase
 					break;
 				case "card_news":
 					$widget['content'] = $this->getNewsContent($widget);
+					break;
+				case "card_generic":
+					$widget['content'] = $this->getGenericContent($widget);
 					break;
 			}
 		}
