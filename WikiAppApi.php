@@ -169,7 +169,16 @@ class WikiAppApi extends ApiBase
 		$content['content'] = $html;
 		
 		$isMatched = preg_match("#date=(.*)#", $text, $matches);
-		if ($isMatched) $content['date'] = $matches[1];
+		
+			//TODO: Check for other date formats?
+		if ($isMatched) 
+		{
+			$strDate = $matches[1];
+			$strDate = str_replace(',', ' ', $strDate);
+			$strDate = str_replace('  ', ' ', $strDate);
+			$dt = DateTime::createFromFormat('F j Y', $strDate);
+			if ($dt) $content['date'] = $dt->getTimestamp();
+		}
 		
 		//TODO: Get snippet from content? Author? Category?
 		
@@ -215,7 +224,7 @@ class WikiAppApi extends ApiBase
 			$newContent = [
 					'title' => $match,
 					'link' => $link,
-					'date' => "",
+					'date' => 0,
 					'author' => "",
 					'category' => "",
 			];
