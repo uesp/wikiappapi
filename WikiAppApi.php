@@ -168,7 +168,10 @@ class WikiAppApi extends ApiBase
 		
 		$content['content'] = $html;
 		
-		//TODO: Get snippet from content?
+		$isMatched = preg_match("#date=(.*)#", $text, $matches);
+		if ($isMatched) $content['date'] = $matches[1];
+		
+		//TODO: Get snippet from content? Author? Category?
 		
 		return true;
 	}
@@ -189,7 +192,8 @@ class WikiAppApi extends ApiBase
 	
 	public function getNewsContent($widget)
 	{
-		$currentPage = $widget['wiki_page'];
+		$currentPage = $widget['wikiPage'];
+		if ($currentPage == null) $currentPage = $widget['wiki_page'];
 		if ($currentPage == null) $currentPage = $this->getProjectNamespace() . ":News";
 		
 		$content = [];
@@ -211,6 +215,9 @@ class WikiAppApi extends ApiBase
 			$newContent = [
 					'title' => $match,
 					'link' => $link,
+					'date' => "",
+					'author' => "",
+					'category' => "",
 			];
 			
 			if ($this->INCLUDE_NEWS_CONTENT) $this->loadNewsPageContent($link, $newContent);
@@ -224,7 +231,8 @@ class WikiAppApi extends ApiBase
 	
 	public function getTriviaContent($widget)
 	{
-		$currentPage = $widget['wiki_page'];
+		$currentPage = $widget['wikiPage'];
+		if ($currentPage == null) $currentPage = $widget['wiki_page'];
 		if ($currentPage == null) $currentPage = "Main_Page/Did_You_Know_Transclusion";
 		
 		$content = [];
@@ -246,7 +254,8 @@ class WikiAppApi extends ApiBase
 	
 	public function getFeaturedArticleContent($widget)
 	{
-		$currentPage = $widget['wiki_page'];
+		$currentPage = $widget['wikiPage'];
+		if ($currentPage == null) $currentPage = $widget['wiki_page'];
 		if ($currentPage == null) $currentPage = "Main Page/Featured Article";
 		
 		$currentFA = $this->getPageText($currentPage);
@@ -306,8 +315,10 @@ class WikiAppApi extends ApiBase
 	
 	public function getFeaturedImageContent($widget)
 	{
-		$currentPage = $widget['wiki_page'];
+		$currentPage = $widget['wikiPage'];
+		if ($currentPage == null) $currentPage = $widget['wiki_page'];
 		if ($currentPage == null) $currentPage = "Main Page/Featured Image";
+		
 		$content = [];
 		
 		$currentFI = $this->getPageText($currentPage);
