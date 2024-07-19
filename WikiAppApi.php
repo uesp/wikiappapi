@@ -14,7 +14,7 @@ class WikiAppApi extends ApiBase
 	const USE_JSON_LINT = true;
 	
 		// Page in PROJECT namespace that contains the JSON data
-	const APPHOMEPAGE = "AppHomePage";
+	const APPHOMEPAGE = "AppManifest";
 	
 	public static $parser = null;
 	public static $parserOptions = null;
