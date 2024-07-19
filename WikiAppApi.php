@@ -2,17 +2,23 @@
 
 
 use MediaWiki\MediaWikiServices;
+use Seld\JsonLint\JsonParser;
 
 
 class WikiAppApi extends ApiBase
 {
 		//TODO: Set from wiki config?
-	public $REMOVE_JSON_COMMENTS = true;
-	public $INCLUDE_NEWS_CONTENT = true;
+	const REMOVE_JSON_COMMENTS = true;
+	const INCLUDE_NEWS_CONTENT = true;
+	const CHECK_JSON_ONPAGELOAD = true;
+	const USE_JSON_LINT = true;
 	
-	public $parser = null;
-	public $parserOptions = null;
-	public $projectNS = null;
+		// Page in PROJECT namespace that contains the JSON data
+	const APPHOMEPAGE = "AppHomePage";
+	
+	public static $parser = null;
+	public static $parserOptions = null;
+	public static $projectNS = null;
 	
 	
 	public function __construct($mainModule, $moduleName, $modulePrefix = '') 
@@ -42,25 +48,25 @@ class WikiAppApi extends ApiBase
 	}
 	
 	
-	public function getProjectNamespace()
+	public static function getProjectNamespace()
 	{
-		if ($this->projectNS) return $this->projectNS;
+		if (self::$projectNS) return self::$projectNS;
 		
 		global $wgContLang;
 		
 		if ($wgContLang)
 		{
-			$this->projectNS = $wgContLang->getFormattedNsText( NS_PROJECT );
+			self::$projectNS = $wgContLang->getFormattedNsText( NS_PROJECT );
 		}
 		else
 		{
-			$this->projectNS = MediaWikiServices::getInstance()->getContentLanguage()->getFormattedNsText( NS_PROJECT );
+			self::$projectNS = MediaWikiServices::getInstance()->getContentLanguage()->getFormattedNsText( NS_PROJECT );
 		}
-		return $this->projectNS;
+		return self::$projectNS;
 	}
 	
 	
-	public function getPageText($textTitle)
+	public static function getPageText($textTitle)
 	{
 		$title = Title::newFromText($textTitle);
 		$page = WikiPage::factory($title);
@@ -134,7 +140,7 @@ class WikiAppApi extends ApiBase
 	}
 	
 	
-	public function removeJsonComments($text)
+	public static function removeJsonComments($text)
 	{
 		return preg_replace('~(" (?:\\\\. | [^"])*+ ") | // [^\v]*+ | /\* .*? \*/~xs', '$1', $text);
 	}
@@ -150,6 +156,23 @@ class WikiAppApi extends ApiBase
 		$mwFile = wfFindFile($imageFile);
 		if (!$mwFile) return "";
 		return $mwFile->getFullUrl();
+	}
+	
+	
+	public static function onBeforePageDisplay( OutputPage $out, Skin $skin ) 
+	{
+		if (!self::CHECK_JSON_ONPAGELOAD) return;
+		
+		$projectNS = self::getProjectNamespace();
+		if ($out->getPageTitle() != "$projectNS:" . self::APPHOMEPAGE) return;
+		
+		$json = self::parseJsonFromPage($errorMsg, true);
+		
+		if ($json == null) 
+			$out->addHTML("<hr><div style='background-color:#ffcccc; color:#000000; padding:5px;'>Error: $errorMsg</div>");
+		else
+			$out->addHTML("<hr><div style='background-color:#ccffcc; color:#000000; padding:5px;'>Page/JSON Format OK!</div>");
+		
 	}
 	
 	
@@ -229,7 +252,7 @@ class WikiAppApi extends ApiBase
 					'category' => "",
 			];
 			
-			if ($this->INCLUDE_NEWS_CONTENT) $this->loadNewsPageContent($link, $newContent);
+			if (self::INCLUDE_NEWS_CONTENT) $this->loadNewsPageContent($link, $newContent);
 			
 			$content[] = $newContent;
 		}
@@ -440,6 +463,70 @@ class WikiAppApi extends ApiBase
 	}
 	
 	
+	public static function parseJsonFromPage(&$errorMsg, $formatErrorHtml = false)
+	{
+		$projectNS = self::getProjectNamespace();
+		$text = self::getPageText("$projectNS:" . self::APPHOMEPAGE);
+		
+		if ($text == null) 
+		{
+			$errorMsg = "Page data not available.";
+			return null;
+		}
+		
+		$text = str_replace('\n', "\n", $text);
+		$text = str_replace('\"', '"', $text);
+		$isMatched = preg_match('#<syntaxhighlight .*?>(.*)</syntaxhighlight>#s', $text, $matches);
+		
+		if (!$isMatched) 
+		{
+			$errorMsg = "Invalid page format (missing <syntaxhighlight...> section).";
+			return null;
+		}
+		
+		$text = $matches[1];
+		if (self::REMOVE_JSON_COMMENTS) $text = self::removeJsonComments($text);
+		
+		$json = json_decode($text, true);
+		
+		if ($json == null)
+		{
+			$errorMsg = "Invalid page JSON format (" . json_last_error_msg() . "). ";
+			$errorMsg .= self::jsonLint($text, $formatErrorHtml)."</pre>";
+			return null;
+		}
+		
+		$errorMsg = "";
+		return $json;
+	}
+	
+	
+	public static function jsonLint($json, $formatErrorHtml = false)
+	{
+		if (!self::USE_JSON_LINT) return "";
+		
+		require_once(__DIR__."/JsonLint/Undefined.php");
+		require_once(__DIR__."/JsonLint/ParsingException.php");
+		require_once(__DIR__."/JsonLint/DuplicateKeyException.php");
+		require_once(__DIR__."/JsonLint/Lexer.php");
+		require_once(__DIR__."/JsonLint/JsonParser.php");
+		
+		$parser = new JsonParser();
+		$errorMsg = "";
+		
+		try
+		{
+			$parser->parse($json);
+		} catch (Exception $e) 
+		{
+			$errorMsg = $e->getMessage();
+		}
+		
+		if ($formatErrorHtml) return "<pre>$errorMsg</pre>";
+		return $errorMsg;
+	}
+	
+	
 	public function execute()
 	{
 		$params = $this->extractRequestParams();
@@ -451,22 +538,8 @@ class WikiAppApi extends ApiBase
 		if ($version <= 0) return $this->outputError("Invalid request, provided non-integer manifest version param.");
 		
 		//TODO: Check manifest version for valid value?
-		
-		$projectNS = $this->getProjectNamespace();
-		$text = $this->getPageText("$projectNS:AppHomePage");
-		if ($text == null) return $this->outputError("Page data not available.");
-		
-		$text = str_replace('\n', "\n", $text);
-		$text = str_replace('\"', '"', $text);
-		$isMatched = preg_match('#<syntaxhighlight .*?>(.*)</syntaxhighlight>#s', $text, $matches);
-		
-		if (!$isMatched) return $this->outputError("Invalid page format.");
-		
-		$text = $matches[1];
-		if ($this->REMOVE_JSON_COMMENTS) $text = $this->removeJsonComments($text);
-		
-		$json = json_decode($text, true);
-		if ($json == null) return $this->outputError("Invalid page JSON format.");
+		$json = $this->parseJsonFromPage($errorMsg, false);
+		if ($json == null) return $this->outputError($errorMsg);
 		
 		$this->replaceJsonContent($json);
 		
