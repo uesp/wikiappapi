@@ -16,7 +16,7 @@
 		"WikiAppApi": "WikiAppApi.php"
 	},
 	"APIModules": {
-		"gethomepage": "WikiAppApi"
+		"getappmanifest": "WikiAppApi"
 	},
 	"Hooks": {
 		"BeforePageDisplay": "WikiAppApi::onBeforePageDisplay"
