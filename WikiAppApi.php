@@ -432,9 +432,10 @@ class WikiAppApi extends ApiBase
 	
 	public function replaceJsonContent(&$json)
 	{
-		$homepage = &$json['homepage'];
+		$homefeed = &$json['homefeed'];
+		if ($homefeed == null) return $json;
 		
-		foreach ($homepage as $i => &$widget)
+		foreach ($homefeed as $i => &$widget)
 		{
 			$type = $widget['type'];
 			
@@ -459,7 +460,7 @@ class WikiAppApi extends ApiBase
 			}
 		}
 		
-		return $text;
+		return $json;
 	}
 	
 	
