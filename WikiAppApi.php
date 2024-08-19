@@ -13,6 +13,9 @@ class WikiAppApi extends ApiBase
 	const CHECK_JSON_ONPAGELOAD = true;
 	const USE_JSON_LINT = true;
 	
+	const APP_VERSION = "2";
+	const OVERWRITE_APP_VERSION = true;
+	
 		// Page in PROJECT namespace that contains the JSON data
 	const APPHOMEPAGE = "AppManifest";
 	
@@ -458,6 +461,11 @@ class WikiAppApi extends ApiBase
 					$widget['content'] = $this->getGenericContent($widget);
 					break;
 			}
+		}
+		
+		if (self::OVERWRITE_APP_VERSION)
+		{
+			$json['version'] = self::APP_VERSION;
 		}
 		
 		return $json;
