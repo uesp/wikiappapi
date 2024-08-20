@@ -13,7 +13,7 @@ class WikiAppApi extends ApiBase
 	const CHECK_JSON_ONPAGELOAD = true;
 	const USE_JSON_LINT = true;
 	
-	const APP_VERSION = "2";
+	const APP_VERSION = 2;
 	const OVERWRITE_APP_VERSION = true;
 	
 		// Page in PROJECT namespace that contains the JSON data
