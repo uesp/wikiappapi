@@ -231,33 +231,63 @@ class WikiAppApi extends ApiBase
 		if ($currentPage == null) $currentPage = $widget['wiki_page'];
 		if ($currentPage == null) $currentPage = $this->getProjectNamespace() . ":News";
 		
+		$sections = $widget['sections'];
+		if ($sections == null) $sections = [ 'Currently Featured News', 'Past News' ];
+		
 		$content = [];
 		
 		$newsText = $this->getPageText($currentPage);
 		if ($newsText == null || $newsText == "") return $content;
 		
-		$isMatched = preg_match('#<onlyinclude>(.*)</onlyinclude>#s', $newsText, $matches);
-		$newsSection = $newsText;
-		if ($isMatched) $newsSection = $matches[1];
+		$result = preg_split('/(==.*?==)/', $newsText, -1, PREG_SPLIT_DELIM_CAPTURE);
+		$newsSections = [];
+		$newsSections["all"] = $newsText;
+		$useAll = true;
 		
-		$isMatched = preg_match_all('#{{' . preg_quote($currentPage) . '/(.*)}}#', $newsSection, $matches, PREG_PATTERN_ORDER);
-		if (!$isMatched) return $content;
-		
-		foreach ($matches[1] as $match)
+		if ($result && count($result) > 1)
 		{
-			$link = $currentPage . "/" . $match;
+			if (substr($result[0], 0, 2 ) != "==") array_shift($result);
+			$useAll = false;
 			
-			$newContent = [
-					'title' => $match,
-					'link' => $link,
-					'date' => 0,
-					'author' => "",
-					'category' => "",
-			];
+			for ($i = 0; $i < count($result); $i += 2)
+			{
+				$header = str_replace("=", "", $result[$i]);
+				$text = $result[$i + 1];
+				
+				$newsSections[$header] = $text;
+			}
+		}
+		
+		foreach ($sections as $section)
+		{
+			//$isMatched = preg_match('#<onlyinclude>(.*)</onlyinclude>#s', $newsText, $matches);
+			//$newsSection = $newsText;
+			//if ($isMatched) $newsSection = $matches[1];
 			
-			if (self::INCLUDE_NEWS_CONTENT) $this->loadNewsPageContent($link, $newContent);
+			$newsSection = $newsSections['all'];
+			if (!$useAll) $newsSection = $newsSections[$section];
+			if ($newsSection == null) continue;
 			
-			$content[] = $newContent;
+			$isMatched = preg_match_all('#{{' . preg_quote($currentPage) . '/(.*)}}#', $newsSection, $matches, PREG_PATTERN_ORDER);
+			if (!$isMatched) $isMatched = preg_match_all('#{{/(.*)}}#', $newsSection, $matches, PREG_PATTERN_ORDER);
+			if (!$isMatched) continue;
+			
+			foreach ($matches[1] as $match)
+			{
+				$link = $currentPage . "/" . $match;
+				
+				$newContent = [
+						'title' => $match,
+						'link' => $link,
+						'date' => 0,
+						'author' => "",
+						'category' => "",
+				];
+				
+				if (self::INCLUDE_NEWS_CONTENT) $this->loadNewsPageContent($link, $newContent);
+				
+				$content[] = $newContent;
+			}
 		}
 		
 		return $content;

@@ -1,4 +1,4 @@
-name = uesp.wikiappapi
+wname = uesp.wikiappapi
 description = MediaWiki extension used on UESP.net
 repository = https://github.com/uesp/wikiappapi
 backup = true
