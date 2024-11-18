@@ -325,6 +325,7 @@ class WikiAppApi extends ApiBase
 		
 		$currentFA = $this->getPageText($currentPage);
 		if (!$currentFA) return $content;
+		$currentFAHtml = $this->getPageHtml($currentPage);
 		
 		$isMatched = preg_match('#\[\[([^\]]+)\]\]#', $currentFA, $matches);
 		if (!$isMatched) return $content;
@@ -345,7 +346,10 @@ class WikiAppApi extends ApiBase
 			'pageURL' => $pageUrl,
 		];
 		
-		$isMatched = preg_match('#<caption>(.*)</caption>#s', $currentFA, $matches);
+			//TODO: This is very fragile and site-specific
+		//$isMatched = preg_match('#<caption>(.*)</caption>#s', $currentFA, $matches);
+		$isMatched = preg_match('#\[\[File:.*?\]\](.*?)\{\{NewLine\}\}#s', $currentFA, $matches);
+		
 		if ($isMatched)
 		{
 			$snippet = trim($matches[1]);
@@ -356,6 +360,7 @@ class WikiAppApi extends ApiBase
 		$isMatched = preg_match('#\[\[(File:[^\]]+)\]\]#', $currentFA, $matches);
 		if (!$isMatched) return $content;
 		
+			//TODO: Make less fragile and site-specific
 		$line = $matches[1];
 		$fileMatched = preg_match('#File:(.*?)\|(?:.*)\|?{{(?:.*\|)?(.*)}}#', $line, $matches);
 		if (!$fileMatched) $fileMatched = preg_match('#File:(.*?)\|(?:.*\|)?(?:.*\|)?(.*)$#', $line, $matches);
@@ -369,6 +374,8 @@ class WikiAppApi extends ApiBase
 			
 			$imageCaption = str_replace("'''", "", $imageCaption);
 			$imageCaption = str_replace("''", "", $imageCaption);
+			
+			$content['caption'] = $imageCaption;
 			
 			$imageUrl = $this->getImageFileUrl($imageFile);
 			if ($imageUrl) $content['pageImageUrl'] = $imageUrl;
