@@ -45,7 +45,7 @@ class WikiAppContentApi extends ApiBase
 		$api->execute();
 		
 		$data = $api->getResult()->getResultData();
-		$apiResult->addValue( null, "parse", $data );
+		$apiResult->addValue( null, "parse", $data['parse'] );
 	}
 	
 	
@@ -74,7 +74,7 @@ class WikiAppContentApi extends ApiBase
 		$api->execute();
 		
 		$data = $api->getResult()->getResultData();
-		$apiResult->addValue( null, "mobileview", $data );
+		$apiResult->addValue( null, "mobileview", $data['mobileview'] );
 	}
 	
 	
@@ -105,7 +105,7 @@ class WikiAppContentApi extends ApiBase
 		$api->execute();
 		
 		$data = $api->getResult()->getResultData();
-		$apiResult->addValue( null, "query", $data );
+		$apiResult->addValue( null, "query", $data['query'] );
 	}
 	
 	
