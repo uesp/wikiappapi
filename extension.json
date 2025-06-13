@@ -1,6 +1,6 @@
 {
 	"name": "WikiAppApi",
-	"version": "0.1",
+	"version": "0.2",
 	"author": [
 		"[https://uesp.net/wiki/User:Daveh Daveh]"
 	],
@@ -13,10 +13,12 @@
 		]
 	},
 	"AutoloadClasses": {
-		"WikiAppApi": "WikiAppApi.php"
+		"WikiAppApi": "WikiAppApi.php",
+		"WikiAppContentApi": "WikiAppContentApi.php"
 	},
 	"APIModules": {
-		"getappmanifest": "WikiAppApi"
+		"getappmanifest": "WikiAppApi",
+		"getappcontent": "WikiAppContentApi"
 	},
 	"Hooks": {
 		"BeforePageDisplay": "WikiAppApi::onBeforePageDisplay"
