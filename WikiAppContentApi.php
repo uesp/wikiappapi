@@ -18,7 +18,6 @@ class WikiAppContentApi extends ApiBase
 	}
 	
 	
-	
 	public function makeParseCall()
 	{
 		$params = $this->extractRequestParams();
@@ -33,6 +32,7 @@ class WikiAppContentApi extends ApiBase
 		
 		$reqParams = [];
 		$reqParams['action'] = "parse";
+		$reqParams['prop'] = "text|langlinks|sections|revid";
 		if ($page) $reqParams['page'] = $page;
 		if ($pageId) $reqParams['pageid'] = $pageId;
 		if ($revId) $reqParams['revid'] = $revId;
@@ -62,12 +62,13 @@ class WikiAppContentApi extends ApiBase
 		
 		$reqParams = [];
 		$reqParams['action'] = "mobileview";
+		$reqParams['sections'] = "all";
 		if ($page) $reqParams['page'] = $page;
 		if ($pageId) $reqParams['pageid'] = $pageId;
 		if ($revId) $reqParams['revid'] = $revId;
 		if ($redirect) $reqParams['redirect'] = $redirect;
 		if ($mobileFormat) $reqParams['mobileformat'] = $mobileFormat;
-		$reqParams['prop'] = "text|sections|normalizedtitle|lastmodified|lastmodifiedby|revision|protection|editable|languagecount|hasvariants";
+		$reqParams['prop'] = "text|normalizedtitle|lastmodified|lastmodifiedby|protection|editable|languagecount|hasvariants";
 		$req = new FauxRequest( $reqParams );
 		
 		$api = new ApiMain( $req );
@@ -90,7 +91,7 @@ class WikiAppContentApi extends ApiBase
 		
 		$reqParams = [];
 		$reqParams['action'] = "query";
-		$reqParams['prop'] = "categories|images|info";
+		$reqParams['prop'] = "categories|images|info|pageimages";
 		if ($page) $reqParams['titles'] = $page;
 		if ($pageId) $reqParams['pageids'] = $pageId;
 		if ($revId) $reqParams['revids'] = $revId;
@@ -98,6 +99,7 @@ class WikiAppContentApi extends ApiBase
 		$reqParams['imlimit'] = "max";
 		$reqParams['inprop'] = "url";
 		$reqParams['intestactions'] = "read";
+		$reqParams['piprop'] = "thumbnail|name|original";
 		if ($redirect) $reqParams['redirect'] = $redirect;
 		$req = new FauxRequest( $reqParams );
 		
