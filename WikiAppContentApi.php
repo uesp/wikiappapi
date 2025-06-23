@@ -26,9 +26,10 @@ class WikiAppContentApi extends ApiBase
 		$page = $params['page'];
 		$pageId = $params['pageid'];
 		$revId = $params['revid'];
-		$redirect = $params['redirect'];
+		$redirect = $params['redirects'];
 		$disabletoc = $params['disabletoc'];
 		$mobileFormat = $params['mobileformat'];
+		$mobileFormat = "true"; //Override always
 		
 		$reqParams = [];
 		$reqParams['action'] = "parse";
@@ -36,7 +37,7 @@ class WikiAppContentApi extends ApiBase
 		if ($page) $reqParams['page'] = $page;
 		if ($pageId) $reqParams['pageid'] = $pageId;
 		if ($revId) $reqParams['revid'] = $revId;
-		if ($redirect) $reqParams['redirect'] = $redirect;
+		if ($redirect) $reqParams['redirects'] = $redirect;
 		if ($disabletoc) $reqParams['disabletoc'] = $disabletoc;
 		if ($mobileFormat) $reqParams['mobileformat'] = $mobileFormat;
 		$req = new FauxRequest( $reqParams );
@@ -57,7 +58,7 @@ class WikiAppContentApi extends ApiBase
 		$page = $params['page'];
 		$pageId = $params['pageid'];
 		$revId = $params['revid'];
-		$redirect = $params['redirect'];
+		$redirect = $params['redirects'];
 		$mobileFormat = $params['mobileformat'];
 		
 		$reqParams = [];
@@ -66,7 +67,7 @@ class WikiAppContentApi extends ApiBase
 		if ($page) $reqParams['page'] = $page;
 		if ($pageId) $reqParams['pageid'] = $pageId;
 		if ($revId) $reqParams['revid'] = $revId;
-		if ($redirect) $reqParams['redirect'] = $redirect;
+		if ($redirect) $reqParams['redirects'] = $redirect;
 		if ($mobileFormat) $reqParams['mobileformat'] = $mobileFormat;
 		$reqParams['prop'] = "text|normalizedtitle|lastmodified|lastmodifiedby|protection|editable|languagecount|hasvariants";
 		$req = new FauxRequest( $reqParams );
@@ -87,11 +88,11 @@ class WikiAppContentApi extends ApiBase
 		$page = $params['page'];
 		$pageId = $params['pageid'];
 		$revId = $params['revid'];
-		$redirect = $params['redirect'];
+		$redirect = $params['redirects'];
 		
 		$reqParams = [];
 		$reqParams['action'] = "query";
-		$reqParams['prop'] = "categories|images|info|pageimages";
+		$reqParams['prop'] = "categories|extracts|images|info|pageimages";
 		if ($page) $reqParams['titles'] = $page;
 		if ($pageId) $reqParams['pageids'] = $pageId;
 		if ($revId) $reqParams['revids'] = $revId;
@@ -100,7 +101,10 @@ class WikiAppContentApi extends ApiBase
 		$reqParams['inprop'] = "url";
 		$reqParams['intestactions'] = "read";
 		$reqParams['piprop'] = "thumbnail|name|original";
-		if ($redirect) $reqParams['redirect'] = $redirect;
+		$reqParams['exintro'] = "true";
+		$reqParams['explaintext'] = "true";
+		$reqParams['exchars'] = "525";
+		if ($redirect) $reqParams['redirects'] = $redirect;
 		$req = new FauxRequest( $reqParams );
 		
 		$api = new ApiMain( $req );
