@@ -58,7 +58,7 @@ class WikiAppContentApi extends ApiBase
 		$page = $params['page'];
 		$pageId = $params['pageid'];
 		$revId = $params['revid'];
-		$redirect = $params['redirects'];
+		$redirect = $params['redirect'];
 		$mobileFormat = $params['mobileformat'];
 		
 		$reqParams = [];
@@ -67,7 +67,7 @@ class WikiAppContentApi extends ApiBase
 		if ($page) $reqParams['page'] = $page;
 		if ($pageId) $reqParams['pageid'] = $pageId;
 		if ($revId) $reqParams['revid'] = $revId;
-		if ($redirect) $reqParams['redirects'] = $redirect;
+		if ($redirect) $reqParams['redirect'] = $redirect;
 		if ($mobileFormat) $reqParams['mobileformat'] = $mobileFormat;
 		$reqParams['prop'] = "text|normalizedtitle|lastmodified|lastmodifiedby|protection|editable|languagecount|hasvariants";
 		$req = new FauxRequest( $reqParams );
