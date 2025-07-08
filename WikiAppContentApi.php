@@ -33,7 +33,7 @@ class WikiAppContentApi extends ApiBase
 		
 		$reqParams = [];
 		$reqParams['action'] = "parse";
-		$reqParams['prop'] = "text|langlinks|sections|revid";
+		$reqParams['prop'] = "text|langlinks|sections|revid|properties";
 		if ($page) $reqParams['page'] = $page;
 		if ($pageId) $reqParams['pageid'] = $pageId;
 		if ($revId) $reqParams['revid'] = $revId;
