@@ -27,6 +27,7 @@ class WikiAppContentApi extends ApiBase
 		$pageId = $params['pageid'];
 		$revId = $params['revid'];
 		$redirect = $params['redirects'];
+		if ($redirect == null) $redirect = "1";
 		$disabletoc = $params['disabletoc'];
 		$mobileFormat = $params['mobileformat'];
 		$mobileFormat = "true"; //Override always
@@ -59,6 +60,8 @@ class WikiAppContentApi extends ApiBase
 		$pageId = $params['pageid'];
 		$revId = $params['revid'];
 		$redirect = $params['redirect'];
+		if ($redirect == null) $redirect = "yes";
+		if ($redirect == 1) $redirect = "yes";
 		$mobileFormat = $params['mobileformat'];
 		
 		$reqParams = [];
@@ -89,6 +92,7 @@ class WikiAppContentApi extends ApiBase
 		$pageId = $params['pageid'];
 		$revId = $params['revid'];
 		$redirect = $params['redirects'];
+		if ($redirect == null) $redirect = "1";
 		
 		$reqParams = [];
 		$reqParams['action'] = "query";
